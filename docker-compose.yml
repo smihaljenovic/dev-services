@@ -1,0 +1,164 @@
+version: "3.9"
+
+volumes:
+   mysql_dev_volume:
+   redis_dev_volume:
+   postgres_dev_volume:
+   pgadmin_dev_volume:
+   elasticsearch_dev_volume:
+   mongo_dev_volume:
+
+networks:
+  nginx_dev_network:
+    driver: bridge
+
+services:
+  nginx_dev:
+    image: nginx:1.21.6-alpine
+    container_name: nginx_dev
+    networks:
+      - nginx_dev_network
+    volumes:
+      - ./dockerData/nginx/www:/var/www
+      - ./dockerData/nginx/hosts:/etc/hosts
+      - ./dockerData/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 8000:80
+
+  mysql_dev:
+    image: mysql:8.0.29
+    container_name: mysql_dev
+    command: --log_bin_trust_function_creators=1 --default-authentication-plugin=mysql_native_password --secure-file-priv=''
+    networks:
+      - nginx_dev_network
+    volumes:
+      - mysql_dev_volume:/var/lib/mysql
+      - ./dockerData/mysql/my.cnf:/etc/mysql/my.cnf
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - 3306:3306
+
+  phpmyadmin_dev:
+    image: phpmyadmin/phpmyadmin:5
+    container_name: phpmyadmin_dev
+    networks:
+      - nginx_dev_network
+    depends_on:
+      - mysql_dev
+    environment:
+      PMA_DB_ENGINE: mysql
+      PMA_ABSOLUTE_URI: http://localhost:8000/phpmyadmin/
+      PMA_HOST: mysql_dev
+      PMA_USER: root
+      PMA_PASSWORD: root
+      UPLOAD_LIMIT: 6G
+    volumes:
+      - ./dockerData/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php
+      - ./dockerData/phpmyadmin/php.ini:/usr/local/etc/php/php.ini
+
+  adminer_dev:
+    image: adminer:4
+    container_name: adminer_dev
+    networks:
+      - nginx_dev_network
+    depends_on:
+      - mysql_dev
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql_dev
+
+  redis_dev:
+    image: redis:7-alpine
+    container_name: redis_dev
+    networks:
+      - nginx_dev_network
+    volumes:
+      - redis_dev_volume:/data
+    ports:
+      - 6379:6379
+
+  postgres_dev:
+    image: postgres:14
+    container_name: postgres_dev
+    networks:
+      - nginx_dev_network
+    volumes:
+      - postgres_dev_volume:/var/lib/postgresql/data
+      - ./dockerData/postgres/backups:/backups
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    ports:
+      - 5432:5432
+
+  pgadmin_dev:
+    image: dpage/pgadmin4:5
+    container_name: pgadmin_dev
+    networks:
+      - nginx_dev_network
+    depends_on:
+      - postgres_dev
+    volumes:
+      - pgadmin_dev_volume:/root/.pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: root@root.com
+      PGADMIN_DEFAULT_PASSWORD: root
+
+  mongo_dev:
+    image: mongo:4
+    container_name: mongo_dev
+    networks:
+      - nginx_dev_network
+    environment:
+      # Note these are not credentials you use to connect with app. Use admin:admin instead
+      # For connection string use mongodb://admin:admin@localhost/lrs?authSource=admin !!! authSource is important!!!
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_DATABASE=admin
+    volumes:
+      - ./dockerData/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - mongo_dev_volume:/data/db
+    ports:
+      - 27017:27017
+      - 27018:27018
+      - 27019:27019
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongoexpress_dev
+    networks:
+      - nginx_dev_network
+    depends_on:
+      - mongo_dev
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo_dev
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+      ME_CONFIG_SITE_BASEURL: /mongoexpress
+
+  elasticsearch_dev:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    container_name: elasticsearch_dev
+    networks:
+      - nginx_dev_network
+    environment:
+      ES_JAVA_OPTS: '-Xms256m -Xmx256m'
+      network.bind_host: 0.0.0.0
+      network.host: 0.0.0.0
+      discovery.type: single-node
+    volumes:
+      - elasticsearch_dev_volume:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  kibana_dev:
+    image: docker.elastic.co/kibana/kibana:7.12.0
+    container_name: kibana_dev
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch_dev:9200
+      SERVER_BASEPATH: /kibana
+    networks:
+      - nginx_dev_network
+    depends_on:
+      - elasticsearch_dev
