@@ -14,7 +14,7 @@ networks:
 
 services:
   nginx_dev:
-    image: nginx:1.21.6-alpine
+    image: nginx:1.25.2-alpine
     container_name: nginx_dev
     networks:
       - nginx_dev_network
@@ -24,9 +24,19 @@ services:
       - ./dockerData/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
       - 8000:80
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: "512M"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mysql_dev:
-    image: mysql:8.0.29
+    image: mysql:8.0.41
     container_name: mysql_dev
     command: --log_bin_trust_function_creators=1 --default-authentication-plugin=mysql_native_password --secure-file-priv=''
     networks:
@@ -38,9 +48,19 @@ services:
       - MYSQL_ROOT_PASSWORD=root
     ports:
       - 3306:3306
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: "1G"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   phpmyadmin_dev:
-    image: phpmyadmin/phpmyadmin:5
+    image: phpmyadmin:5.2.2
     container_name: phpmyadmin_dev
     networks:
       - nginx_dev_network
@@ -56,9 +76,19 @@ services:
     volumes:
       - ./dockerData/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php
       - ./dockerData/phpmyadmin/php.ini:/usr/local/etc/php/php.ini
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/phpmyadmin"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   adminer_dev:
-    image: adminer:4
+    image: adminer:4.8.1
     container_name: adminer_dev
     networks:
       - nginx_dev_network
@@ -66,9 +96,19 @@ services:
       - mysql_dev
     environment:
       ADMINER_DEFAULT_SERVER: mysql_dev
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   redis_dev:
-    image: redis:7-alpine
+    image: redis:8.0-M03-alpine
     container_name: redis_dev
     networks:
       - nginx_dev_network
@@ -76,9 +116,19 @@ services:
       - redis_dev_volume:/data
     ports:
       - 6379:6379
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: "512M"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   postgres_dev:
-    image: postgres:14
+    image: postgres:17.2-alpine
     container_name: postgres_dev
     networks:
       - nginx_dev_network
@@ -90,9 +140,19 @@ services:
       POSTGRES_PASSWORD: root
     ports:
       - 5432:5432
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: "1G"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "root"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   pgadmin_dev:
-    image: dpage/pgadmin4:5
+    image: elestio/pgadmin:REL-8_13
     container_name: pgadmin_dev
     networks:
       - nginx_dev_network
@@ -103,15 +163,23 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: root@root.com
       PGADMIN_DEFAULT_PASSWORD: root
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mongo_dev:
-    image: mongo:4
+    image: mongo:8.0.4
     container_name: mongo_dev
     networks:
       - nginx_dev_network
     environment:
-      # Note these are not credentials you use to connect with app. Use admin:admin instead
-      # For connection string use mongodb://admin:admin@localhost/lrs?authSource=admin !!! authSource is important!!!
       - MONGO_INITDB_ROOT_USERNAME=root
       - MONGO_INITDB_ROOT_PASSWORD=root
       - MONGO_INITDB_DATABASE=admin
@@ -122,9 +190,19 @@ services:
       - 27017:27017
       - 27018:27018
       - 27019:27019
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: "512M"
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mongo-express:
-    image: mongo-express
+    image: mongo-express:1.0.2-20-alpine3.19
     container_name: mongoexpress_dev
     networks:
       - nginx_dev_network
@@ -135,9 +213,19 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
       ME_CONFIG_SITE_BASEURL: /mongoexpress
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   elasticsearch_dev:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    image: elasticsearch:8.17.1
     container_name: elasticsearch_dev
     networks:
       - nginx_dev_network
@@ -151,9 +239,19 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: "1G"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   kibana_dev:
-    image: docker.elastic.co/kibana/kibana:7.12.0
+    image: kibana:8.17.1
     container_name: kibana_dev
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch_dev:9200
@@ -162,3 +260,13 @@ services:
       - nginx_dev_network
     depends_on:
       - elasticsearch_dev
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: "512M"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
