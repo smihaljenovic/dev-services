@@ -175,14 +175,14 @@ services:
       retries: 3
 
   mongo_dev:
-    image: mongo:8.0.4
+    image: mongodb/mongodb-atlas-local:latest
     container_name: mongo_dev
     networks:
       - nginx_dev_network
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=root
-      - MONGO_INITDB_DATABASE=admin
+      - MONGODB_INITDB_ROOT_USERNAME=root
+      - MONGODB_INITDB_ROOT_PASSWORD=root
+      - MONGODB_INITDB_DATABASE=admin
     volumes:
       - ./dockerData/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
       - mongo_dev_volume:/data/db
