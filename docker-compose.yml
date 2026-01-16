@@ -1,12 +1,13 @@
 version: "3.9"
 
 volumes:
-   mysql_dev_volume:
-   redis_dev_volume:
-   postgres_dev_volume:
-   pgadmin_dev_volume:
-   elasticsearch_dev_volume:
-   mongo_dev_volume:
+  mysql_dev_volume:
+  redis_dev_volume:
+  postgres_dev_volume:
+  pgadmin_dev_volume:
+  elasticsearch_dev_volume:
+  mongo_dev_volume:
+
 
 networks:
   nginx_dev_network:
@@ -14,7 +15,7 @@ networks:
 
 services:
   nginx_dev:
-    image: nginx:1.25.2-alpine
+    image: nginx:1.28.1-alpine3.23
     container_name: nginx_dev
     networks:
       - nginx_dev_network
@@ -54,13 +55,13 @@ services:
           cpus: "1.00"
           memory: "1G"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   phpmyadmin_dev:
-    image: phpmyadmin:5.2.2
+    image: phpmyadmin:5.2.3
     container_name: phpmyadmin_dev
     networks:
       - nginx_dev_network
@@ -82,18 +83,19 @@ services:
           cpus: "0.25"
           memory: "256M"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/phpmyadmin"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/phpmyadmin" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   adminer_dev:
-    image: adminer:4.8.1
+    image: adminer:5.4.1
     container_name: adminer_dev
     networks:
       - nginx_dev_network
     depends_on:
       - mysql_dev
+      - nginx_dev
     environment:
       ADMINER_DEFAULT_SERVER: mysql_dev
     deploy:
@@ -102,13 +104,13 @@ services:
           cpus: "0.25"
           memory: "256M"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   redis_dev:
-    image: redis:8.0-M03-alpine
+    image: redis:8.4.0-alpine
     container_name: redis_dev
     networks:
       - nginx_dev_network
@@ -122,7 +124,7 @@ services:
           cpus: "0.50"
           memory: "512M"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -146,68 +148,70 @@ services:
           cpus: "1.00"
           memory: "1G"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "root"]
+      test: [ "CMD", "pg_isready", "-U", "root" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   pgadmin_dev:
-    image: elestio/pgadmin:REL-8_13
+    image: dpage/pgadmin4:9.11
     container_name: pgadmin_dev
     networks:
       - nginx_dev_network
     depends_on:
       - postgres_dev
+      - nginx_dev
     volumes:
       - pgadmin_dev_volume:/root/.pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: root@root.com
       PGADMIN_DEFAULT_PASSWORD: root
+      SCRIPT_NAME: /pgadmin
     deploy:
       resources:
         limits:
           cpus: "0.25"
           memory: "256M"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: [ "CMD", "curl", "-f", "http://localhost:80/pgadmin" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   mongo_dev:
-    image: mongodb/mongodb-atlas-local:latest
+    image: mongo:8.0
     container_name: mongo_dev
     networks:
       - nginx_dev_network
     environment:
-      - MONGODB_INITDB_ROOT_USERNAME=root
-      - MONGODB_INITDB_ROOT_PASSWORD=root
-      - MONGODB_INITDB_DATABASE=admin
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_DATABASE=admin
     volumes:
       - ./dockerData/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
       - mongo_dev_volume:/data/db
     ports:
       - 27017:27017
-      - 27018:27018
-      - 27019:27019
     deploy:
       resources:
         limits:
-          cpus: "0.50"
-          memory: "512M"
+          cpus: "1.00"
+          memory: "1G"
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
-  mongo-express:
+  mongoexpress_dev:
     image: mongo-express:1.0.2-20-alpine3.19
     container_name: mongoexpress_dev
     networks:
       - nginx_dev_network
     depends_on:
       - mongo_dev
+      - nginx_dev
     environment:
       ME_CONFIG_MONGODB_SERVER: mongo_dev
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
@@ -219,20 +223,19 @@ services:
           cpus: "0.25"
           memory: "256M"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/mongoexpress" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   elasticsearch_dev:
-    image: elasticsearch:8.17.1
+    image: elasticsearch:9.2.4
     container_name: elasticsearch_dev
     networks:
       - nginx_dev_network
     environment:
       ES_JAVA_OPTS: '-Xms256m -Xmx256m'
-      network.bind_host: 0.0.0.0
-      network.host: 0.0.0.0
+      xpack.security.enabled: "false"
       discovery.type: single-node
     volumes:
       - elasticsearch_dev_volume:/usr/share/elasticsearch/data
@@ -245,13 +248,13 @@ services:
           cpus: "1.00"
           memory: "1G"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9200/_cluster/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   kibana_dev:
-    image: kibana:8.17.1
+    image: kibana:9.2.4
     container_name: kibana_dev
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch_dev:9200
@@ -263,10 +266,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.50"
-          memory: "512M"
+          cpus: "1.00"
+          memory: "2G"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5601"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5601" ]
       interval: 30s
       timeout: 10s
       retries: 3
