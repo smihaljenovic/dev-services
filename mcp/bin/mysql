@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/_env.sh"
+cd "$ROOT"
+
+export MYSQL_HOST="${MYSQL_HOST:-127.0.0.1}"
+export MYSQL_PORT="${MYSQL_PORT:-3306}"
+export MYSQL_USER="${MYSQL_USER:-root}"
+export MYSQL_PASS="${MYSQL_PASS:-root}"
+export ALLOW_INSERT_OPERATION="${ALLOW_INSERT_OPERATION:-true}"
+export ALLOW_UPDATE_OPERATION="${ALLOW_UPDATE_OPERATION:-true}"
+export ALLOW_DELETE_OPERATION="${ALLOW_DELETE_OPERATION:-true}"
+
+exec "$NODE" "$ROOT/node_modules/@benborla29/mcp-server-mysql/dist/index.js"

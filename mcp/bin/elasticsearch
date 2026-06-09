@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/_env.sh"
+cd "$ROOT"
+
+export ES_URL="${ES_URL:-http://localhost:9200}"
+export OTEL_LOG_LEVEL="${OTEL_LOG_LEVEL:-none}"
+
+exec "$NODE" "$ROOT/node_modules/@elastic/mcp-server-elasticsearch/dist/index.js"

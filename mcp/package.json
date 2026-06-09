@@ -1,0 +1,14 @@
+{
+  "name": "dev-services-mcp",
+  "private": true,
+  "description": "Official MCP servers for local dev-services Docker stack",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@benborla29/mcp-server-mysql": "2.0.8",
+    "@elastic/mcp-server-elasticsearch": "0.3.1",
+    "@modelcontextprotocol/server-postgres": "0.6.2",
+    "mongodb-mcp-server": "1.12.0"
+  }
+}

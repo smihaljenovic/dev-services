@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/_env.sh"
+cd "$ROOT"
+
+export MDB_MCP_CONNECTION_STRING="${MDB_MCP_CONNECTION_STRING:-mongodb://root:root@localhost:27017/?authSource=admin}"
+
+exec "$NODE" "$ROOT/node_modules/mongodb-mcp-server/dist/esm/index.js"

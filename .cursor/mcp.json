@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "mysql_dev": {
+      "command": "bash",
+      "args": ["mcp/bin/mysql"]
+    },
+    "postgres_dev": {
+      "command": "bash",
+      "args": ["mcp/bin/postgres"]
+    },
+    "redis_dev": {
+      "command": "bash",
+      "args": ["mcp/bin/redis"]
+    },
+    "mongo_dev": {
+      "command": "bash",
+      "args": ["mcp/bin/mongo"]
+    },
+    "elasticsearch_dev": {
+      "command": "bash",
+      "args": ["mcp/bin/elasticsearch"]
+    }
+  }
+}
