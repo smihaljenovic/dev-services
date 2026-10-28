@@ -7,6 +7,7 @@ volumes:
   pgadmin_dev_volume:
   elasticsearch_dev_volume:
   mongo_dev_volume:
+  gcs_dev_data:
 
 
 networks:
@@ -272,6 +273,51 @@ services:
           memory: "2G"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5601" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pubsub_dev:
+    # Official Google Pub/Sub emulator. Version checked 2026-10-28 (latest: 591.0.0).
+    # In-memory only: topics, subscriptions and messages are lost on restart.
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:591.0.0-emulators
+    container_name: pubsub_dev
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=zooid-local
+    networks:
+      - nginx_dev_network
+    ports:
+      - 127.0.0.1:8085:8085
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: "512M"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8085" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  gcs_dev:
+    # fake-gcs-server (Cloud Storage JSON/XML API emulator). Version checked 2026-10-28 (latest: 1.56.1).
+    # No auth and no signed URL validation.
+    image: fsouza/fake-gcs-server:1.56.1
+    container_name: gcs_dev
+    command: -scheme http -port 4443 -backend filesystem -filesystem-root /storage -external-url http://localhost:4443 -public-host localhost:4443
+    networks:
+      - nginx_dev_network
+    volumes:
+      - gcs_dev_data:/storage
+    ports:
+      - 127.0.0.1:4443:4443
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: "512M"
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:4443/storage/v1/b" ]
       interval: 30s
       timeout: 10s
       retries: 3

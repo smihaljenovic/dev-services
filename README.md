@@ -19,6 +19,8 @@ A comprehensive Docker Compose setup providing essential development services in
 | **Mongo Express** | 1.0.2-20-alpine3.19 | via nginx:8000 | MongoDB web interface              |
 | **Elasticsearch** | 9.2.4               | 9200, 9300     | Search and analytics engine        |
 | **Kibana**        | 9.2.4               | 5601           | Elasticsearch visualization        |
+| **Pub/Sub emulator** | 591.0.0-emulators | 8085 (localhost) | Google Cloud Pub/Sub emulator    |
+| **fake-gcs-server** | 1.56.1            | 4443 (localhost) | Google Cloud Storage emulator    |
 
 ## 📋 Prerequisites
 
@@ -359,6 +361,22 @@ docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 - **No Authentication Required**
 - **First Time Setup**: Kibana will auto-connect to Elasticsearch
 
+### 12. Google Cloud emulators (Pub/Sub, Cloud Storage)
+
+| Service                | Container    | Host address            | App containers use     | Client setting                                                        |
+| ---------------------- | ------------ | ----------------------- | ---------------------- | --------------------------------------------------------------------- |
+| Pub/Sub emulator       | `pubsub_dev` | `localhost:8085`        | `pubsub_dev:8085`      | `PUBSUB_EMULATOR_HOST`, any project id (Zooid uses `zooid-local`)     |
+| Cloud Storage emulator | `gcs_dev`    | `http://localhost:4443` | `http://gcs_dev:4443`  | `STORAGE_EMULATOR_HOST`                                               |
+
+```bash
+docker compose up -d pubsub_dev gcs_dev
+```
+
+- **Pub/Sub** (`gcr.io/google.com/cloudsdktool/google-cloud-cli:591.0.0-emulators`) keeps everything in memory and forgets all topics, subscriptions and messages on restart. Apps recreate their topics and subscriptions at start-up. Push subscriptions can target app containers by name (e.g. `http://zooid-worker:3334/...`) when those containers join `dev-services_nginx_dev_network`.
+- **Cloud Storage** (`fsouza/fake-gcs-server:1.56.1`) keeps files in the `gcs_dev_data` volume, so they survive restarts. No buckets are pre-created; each app creates its own.
+- Neither emulator checks credentials, and fake-gcs-server does **not** validate signed URLs.
+- Both ports are bound to `127.0.0.1` only.
+
 ## 📁 Directory Structure
 
 ```
@@ -405,6 +423,7 @@ All databases use named Docker volumes for data persistence:
 - `redis_dev_volume`
 - `elasticsearch_dev_volume`
 - `pgadmin_dev_volume`
+- `gcs_dev_data` (Cloud Storage emulator files)
 
 ### Health Checks
 
