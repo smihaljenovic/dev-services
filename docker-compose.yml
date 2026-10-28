@@ -130,13 +130,15 @@ services:
       retries: 3
 
   postgres_dev:
-    image: postgres:17.2-alpine
+    # pgvector required for migration 000370+ (AI savjetnik). Do not use stock postgres:alpine.
+    image: pgvector/pgvector:pg17
     container_name: postgres_dev
     networks:
       - nginx_dev_network
     volumes:
       - postgres_dev_volume:/var/lib/postgresql/data
       - ./dockerData/postgres/backups:/backups
+      - ./dockerData/postgres/init:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
